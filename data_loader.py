@@ -1,14 +1,16 @@
 import os
 import glob
 import numpy as np
-import pathlib
 import tensorflow as tf
 
 tf.enable_eager_execution()
 
 # https://www.tensorflow.org/guide/datasets#applying_arbitrary_python_logic_with_tfpy_func
 def load_numpy_arrays(array_path, label, n_frames):
-    array = np.load(array_path.decode()).astype(np.float32)
+    try:
+        array = np.load(array_path.decode()).astype(np.float32)
+    except ValueError:
+        print(array_path)
     if len(array) < n_frames:
         container = np.zeros((n_frames , 65), dtype=np.float32)
         container[0:len(array)] = array
@@ -19,24 +21,25 @@ def load_numpy_arrays(array_path, label, n_frames):
 
     return container, label
 
-def generate_voxc1_ds(voxc1_dir, n_frames, batch_size):
+def generate_voxc1_ds(voxc1_dir, n_frames, is_train=False):
     """
 
     :param voxc1_dir: feature's root eg) 'voxceleb1/feats/fbank64'
     :param n_frames: number of frames eg) 300
-    :param batch_size:
     :return: tf.data.Dataset of voxceleb1
     """
 
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     # voxc1_dir should be feature's root
     feat_files = glob.glob(voxc1_dir + '/**/*')
-    all_labels = os.listdir(voxc1_dir)
+    all_labels = sorted(os.listdir(voxc1_dir))
     label2index = {label:i for i, label in enumerate(all_labels)}
+    n_labels = len(label2index)
 
     def parse_label(file_n):
+        # for window compatibility
         file_n = file_n.replace("\\", '/')
-        label = file_n.split("/")[4]
+        label = file_n.split("/")[-2]
         return label2index[label]
 
     label_list = list(map(parse_label, feat_files))
@@ -50,12 +53,12 @@ def generate_voxc1_ds(voxc1_dir, n_frames, batch_size):
         num_parallel_calls=AUTOTUNE
     )
 
-    voxc1_ds = voxc1_ds.shuffle(buffer_size=len(feat_files))
-    voxc1_ds = voxc1_ds.repeat()
-    voxc1_ds = voxc1_ds.batch(batch_size)
-    voxc1_ds = voxc1_ds.prefetch(buffer_size=AUTOTUNE)
+    if is_train:
+        voxc1_ds = voxc1_ds.shuffle(buffer_size=len(feat_files))
+        voxc1_ds = voxc1_ds.repeat()
+        voxc1_ds = voxc1_ds.prefetch(buffer_size=AUTOTUNE)
 
-    return voxc1_ds
+    return voxc1_ds, n_labels
 
 def measure_ds_speed(ds, n_samples, batch_size):
     import time
