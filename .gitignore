@@ -1,0 +1,16 @@
+# binary files
+*.npy
+*.pkl
+*.h5
+*.ckpt.*
+
+# ignored directories
+benchmark
+tf_models
+tflite_models
+
+# temporary files
+*.pyc
+
+# database
+*.csv
