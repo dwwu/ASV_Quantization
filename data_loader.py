@@ -9,11 +9,13 @@ def load_numpy_arrays(array_path, label, n_frames):
         array = np.load(array_path.decode()).astype(np.float32)
     except ValueError:
         print(array_path)
+
     if len(array) < n_frames:
         container = np.zeros((n_frames , 65), dtype=np.float32)
         container[0:len(array)] = array
     else:
-        container = array[:n_frames]
+        start_idx = np.random.randint(0, len(array)-n_frames)
+        container = array[start_idx:start_idx+n_frames]
 
     container = np.expand_dims(container, 1)
 
