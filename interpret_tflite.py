@@ -13,13 +13,13 @@ voxc1_ds, _= generate_voxc1_ds(voxc1_test_dir, n_frames, is_train=False)
 voxc1_ds = voxc1_ds.batch(batch_size)
 
 tflite_file = "./tf_models/voxc1/training_0/latest_quant32.tflite"
+
 interpreter = tf.lite.Interpreter(model_path=tflite_file)
 interpreter.allocate_tensors()
 
 input_index = interpreter.get_input_details()[0]["index"]
 output_index = interpreter.get_output_details()[0]["index"]
 
-# tf.logging.set_verbosity(tf.logging.DEBUG)
 
 embed_list = []
 for i, (feat, label) in enumerate(tqdm(voxc1_ds.take(3), total=4874//batch_size)):
