@@ -4,28 +4,30 @@ import numpy as np
 import tensorflow as tf
 
 # https://www.tensorflow.org/guide/datasets#applying_arbitrary_python_logic_with_tfpy_func
-def load_numpy_arrays(array_path, label, n_frames):
+def load_numpy_arrays(array_path, label, frame_range):
     try:
         array = np.load(array_path.decode()).astype(np.float32)
     except ValueError:
         print(array_path)
 
+    n_frames = np.random.randint(frame_range[0], frame_range[1]+1)
+
     if len(array) < n_frames:
         container = np.zeros((n_frames , 65), dtype=np.float32)
         container[0:len(array)] = array
     else:
-        start_idx = np.random.randint(0, len(array)-n_frames)
+        start_idx = np.random.randint(0, len(array)-n_frames+1)
         container = array[start_idx:start_idx+n_frames]
 
     container = np.expand_dims(container, 1)
 
     return container, label
 
-def generate_voxc1_ds(voxc1_dir, n_frames, is_train=False, return_labels=False):
+def generate_voxc1_ds(voxc1_dir, frame_range=(200, 400), is_train=False, return_labels=False):
     """
 
     :param voxc1_dir: feature's root eg) 'voxceleb1/feats/fbank64'
-    :param n_frames: number of frames eg) 300
+    :param frame_range: number of frames eg) 300
     :return: tf.data.Dataset of voxceleb1
     """
 
@@ -48,7 +50,7 @@ def generate_voxc1_ds(voxc1_dir, n_frames, is_train=False, return_labels=False):
 
     voxc1_ds = path_ds.map(
         lambda array_path, label: tuple(tf.numpy_function(load_numpy_arrays,
-                                                   [array_path, label, n_frames],
+                                                   [array_path, label, frame_range],
                                                    [tf.float32, tf.int32])),
         num_parallel_calls=AUTOTUNE
     )

@@ -18,47 +18,62 @@ class StatPooling(tf.keras.layers.Layer):
         return tf.squeeze(stat, axis=1)
 
 
-def make_tdnn_model(n_labels, n_frames=None):
+def make_tdnn_model(config, n_labels, n_frames=None):
     """
         dimension = (N, W, H, C) = (batch_size, T, 1, feat) for channel_last
         :return:
     """
 
+    conv_dim = config.get('conv_dim', 512)
+    stat_dim = config.get('stat_dim', 1500)
+    fc_dim = config.get('fc_dim', 1024)
+
+    l2_decay = 0.000001
     model = tf.keras.Sequential()
 
-    model.add(tf.keras.layers.Conv2D(512, kernel_size=(5, 1), strides=1, dilation_rate=1,
+    model.add(tf.keras.layers.Conv2D(conv_dim, kernel_size=(5, 1), strides=1, dilation_rate=1,
                                      input_shape=(n_frames, 1, 65),
-                                     activation='linear', use_bias=True))
+                                     activation='linear', use_bias=True,
+                                     kernel_regularizer=tf.keras.regularizers.l2(l2_decay))
+                                     )
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
-    model.add(tf.keras.layers.Conv2D(512, kernel_size=(3, 1), strides=1, dilation_rate=(3, 1),
-                                     activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Conv2D(conv_dim, kernel_size=(3, 1), strides=1, dilation_rate=(3, 1),
+                                     activation='linear', use_bias=True,
+                                     kernel_regularizer=tf.keras.regularizers.l2(l2_decay))
+                                     )
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
-    model.add(tf.keras.layers.Conv2D(512, kernel_size=(3, 1), strides=1, dilation_rate=(4, 1),
-                                     activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Conv2D(conv_dim, kernel_size=(3, 1), strides=1, dilation_rate=(4, 1),
+                                     activation='linear', use_bias=True,
+                                     kernel_regularizer=tf.keras.regularizers.l2(l2_decay))
+                                     )
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
-    model.add(tf.keras.layers.Conv2D(512, kernel_size=1, strides=1, dilation_rate=1,
-                                     activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Conv2D(conv_dim, kernel_size=1, strides=1, dilation_rate=1,
+                                     activation='linear', use_bias=True,
+                                     kernel_regularizer=tf.keras.regularizers.l2(l2_decay))
+                                     )
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
-    model.add(tf.keras.layers.Conv2D(1500, kernel_size=1, strides=1, dilation_rate=1,
-                                     activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Conv2D(stat_dim, kernel_size=1, strides=1, dilation_rate=1,
+                                     activation='linear', use_bias=True,
+                                     kernel_regularizer=tf.keras.regularizers.l2(l2_decay))
+                                     )
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
     model.add(StatPooling())
 
-    model.add(tf.keras.layers.Dense(1024, activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Dense(fc_dim, activation='linear', use_bias=True))
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
-    model.add(tf.keras.layers.Dense(1024, activation='linear', use_bias=True))
+    model.add(tf.keras.layers.Dense(fc_dim, activation='linear', use_bias=True))
     model.add(tf.keras.layers.BatchNormalization(axis=-1))
     model.add(tf.keras.layers.ReLU())
 
