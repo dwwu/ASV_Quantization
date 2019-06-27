@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import tensorflow as tf
 
+tf.enable_eager_execution()
 # https://www.tensorflow.org/guide/datasets#applying_arbitrary_python_logic_with_tfpy_func
 def load_numpy_arrays(array_path, label, frame_range):
     try:

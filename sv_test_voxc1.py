@@ -15,6 +15,7 @@ def cosine_similarity(a, b):
 
 trial = pd.read_csv("voxc1_sv_trial.csv")
 embeddings = np.load("xvector_embeds/voxc1_sv_embeds.npy")
+# embeddings = np.load("xvector_embeds/voxc1_xvector_embeds_quant.npy")
 
 score_vector = cosine_similarity(embeddings[trial.enroll_idx],
         embeddings[trial.test_idx])
