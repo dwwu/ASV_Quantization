@@ -3,7 +3,6 @@ import glob
 import numpy as np
 import tensorflow as tf
 
-tf.enable_eager_execution()
 # https://www.tensorflow.org/guide/datasets#applying_arbitrary_python_logic_with_tfpy_func
 def load_numpy_arrays(array_path, label, frame_range):
     try:
@@ -67,6 +66,51 @@ def generate_voxc1_ds(voxc1_dir, frame_range=(200, 400), is_train=False, return_
         ret = voxc1_ds
 
     return ret
+
+
+def voxc1_to_ds(voxc1_dir, batch_size, frame_range):
+    voxc1_train_dir = os.path.join(voxc1_dir, "dev/train/")
+    voxc1_val_dir = os.path.join(voxc1_dir, "dev/val/")
+    voxc1_test_dir = os.path.join(voxc1_dir, "dev/test/")
+
+    train_ds = generate_voxc1_ds(voxc1_train_dir, frame_range, is_train=True)
+    train_ds = train_ds.padded_batch(batch_size, padded_shapes=([None, 1, 65], []))
+
+    val_ds = generate_voxc1_ds(voxc1_val_dir, (300, 300))
+    val_ds = val_ds.batch(batch_size)
+
+    test_ds = generate_voxc1_ds(voxc1_test_dir, (300, 300))
+    test_ds = test_ds.batch(batch_size)
+
+    return train_ds, val_ds, test_ds
+
+def voxc1_to_gends(train_x, train_y, val_x, val_y, batch_size):
+    AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+    def train_generator():
+        for x, y in zip(train_x, train_y):
+            yield x, y
+
+    def val_generator():
+        for x, y in zip(val_x, val_y):
+            yield x, y
+
+    train_ds = tf.data.Dataset.from_generator(train_generator,
+                                              output_types=(tf.float32, tf.int32),
+                                              output_shapes=((500, 1, 65), ()))
+    train_ds = train_ds.shuffle(buffer_size=134000)
+    train_ds = train_ds.repeat()
+    train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
+    train_ds = train_ds.batch(batch_size)
+
+    val_ds = tf.data.Dataset.from_generator(val_generator,
+                                            output_types=(tf.float32, tf.int32),
+                                            output_shapes=((500, 1, 65), ()))
+    val_ds = val_ds.batch(batch_size)
+
+    return train_ds, val_ds
+
+
 
 def measure_ds_speed(ds, n_samples, batch_size):
     import time

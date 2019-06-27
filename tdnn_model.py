@@ -17,6 +17,24 @@ class StatPooling(tf.keras.layers.Layer):
         stat = tf.concat([mean, std], axis=-1)
         return tf.squeeze(stat, axis=1)
 
+def tdnn_config(model_size):
+    if model_size == 'S':
+        conv_dim = 256
+        stat_dim = 512
+        fc_dim = 256
+    elif model_size == 'M':
+        conv_dim = 512
+        stat_dim = 1500
+        fc_dim = 512
+    elif model_size == 'L':
+        conv_dim = 512
+        stat_dim = 1500
+        fc_dim = 512
+    else:
+        raise NotImplementedError
+
+    config = dict(conv_dim=conv_dim, stat_dimm=stat_dim, fc_dim=fc_dim)
+    return config
 
 def make_tdnn_model(config, n_labels, n_frames=None):
     """
