@@ -69,14 +69,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("convert tf model to tflite model")
     parser.add_argument("-ckpt_dir", type=str, required=True)
     # parser.add_argument("-tflite_dir", type=str, required=True)
-    # parser.add_argument("-model_size", type=str, choices=['S', 'M', 'L'], required=True)
+    parser.add_argument("-model_size", type=str, choices=['S', 'M', 'L'], required=True)
     parser.add_argument("-post_quant", action='store_true')
     parser.add_argument("-act_quant", action='store_true')
     args = parser.parse_args()
 
     ckpt_dir = args.ckpt_dir
     tflite_dir = os.path.join(args.ckpt_dir, 'tflite_model')
-    model_size = ckpt_dir.split('/')[-1]
+    model_size = args.model_size
 
     config = tdnn_config(model_size)
     model = make_tdnn_model(config, 1211)

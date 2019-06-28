@@ -2,9 +2,8 @@ import os
 import numpy as np
 import argparse
 import tensorflow as tf
-import subprocess
 
-from tdnn_model import make_tdnn_model, tdnn_config
+from tdnn_model import make_simple_model, tdnn_config
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -20,21 +19,23 @@ args = parser.parse_args()
 
 n_epochs = args.n_epochs
 batch_size = args.batch_size
-steps_per_epoch = 10
 model_size = args.model_size
 ckpt_dir = os.path.join(args.ckpt_dir, model_size)
 
 # datasets
 
-# train_x = np.expand_dims(np.load("train_500_1.npy"), 2)
-# train_y = np.load("train_500_1_label.npy")
-# val_x = np.expand_dims(np.load("val_500.npy"), 2)
-# val_y = np.load("val_500_label.npy")
+# steps_per_epoch = 134000 // batch_size
+steps_per_epoch = 10
+train_x = np.expand_dims(np.load("sv_set/voxc1/fbank64/npy/train_500_1.npy"), 2)
+train_y = np.load("sv_set/voxc1/fbank64/npy/train_500_1_label.npy")
+val_x = np.expand_dims(np.load("sv_set/voxc1/fbank64/npy/val_500.npy"), 2)
+val_y = np.load("sv_set/voxc1/fbank64/npy/val_500_label.npy")
 
-train_x = np.random.random((1000, 500, 1, 65))
-train_y = np.random.randint(0, 1211, (1000,))
-val_x = np.random.random((1000, 500, 1, 65))
-val_y = np.random.randint(0, 1211, (1000,))
+# steps_per_epoch = 10
+# train_x = np.random.random((1000, 500, 1, 65))
+# train_y = np.random.randint(0, 1211, (1000,))
+# val_x = np.random.random((1000, 500, 1, 65))
+# val_y = np.random.randint(0, 1211, (1000,))
 
 def train_generator():
     for x, y in zip(train_x, train_y):
@@ -44,7 +45,6 @@ def val_generator():
     for x, y in zip(val_x, val_y):
         yield x, y
 
-
 # callbacks
 
 # include the epoch in the file name. (uses `str.format`)
@@ -52,7 +52,7 @@ checkpoint_path = os.path.join(ckpt_dir, model_size,
                                "checkpoint-{epoch:04d}.ckpt")
 
 cp_callback = tf.keras.callbacks.ModelCheckpoint(
-    checkpoint_path, verbose=1, save_weights_only=True, save_freq=3)
+    checkpoint_path, verbose=1, save_weights_only=True, period=3)
 
 def scheduler(epoch):
     if epoch < 35:
@@ -73,7 +73,7 @@ train_sess = tf.Session(graph=train_graph)
 tf.keras.backend.set_session(train_sess)
 with train_graph.as_default():
     config = tdnn_config(model_size)
-    train_model = make_tdnn_model(config, n_labels=1211)
+    train_model = make_simple_model(config, n_labels=1211)
 
     train_ds = tf.data.Dataset.from_generator(train_generator,
             output_types=(tf.float32, tf.int32),
@@ -88,7 +88,8 @@ with train_graph.as_default():
             output_shapes=((500, 1, 65), ()))
     val_ds = val_ds.batch(batch_size)
 
-    tf.contrib.quantize.create_training_graph(input_graph=train_graph, quant_delay=100)
+    tf.contrib.quantize.create_training_graph(input_graph=train_graph,
+            quant_delay=0)
     train_sess.run(tf.global_variables_initializer())
 
     train_model.compile(optimizer=tf.keras.optimizers.Adam(0.001),
@@ -116,7 +117,7 @@ tf.keras.backend.set_session(eval_sess)
 with eval_graph.as_default():
     tf.keras.backend.set_learning_phase(0)
     tf.contrib.quantize.create_eval_graph(input_graph=eval_graph)
-    eval_model = make_tdnn_model(config, n_labels=1211)
+    eval_model = make_simple_model(config, n_labels=1211)
     eval_graph_def = eval_graph.as_graph_def()
     saver = tf.train.Saver()
     saver.restore(eval_sess, save_file)

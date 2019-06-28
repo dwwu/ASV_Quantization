@@ -4,55 +4,66 @@ import argparse
 
 from tqdm import tqdm
 import tensorflow as tf
+from multiprocessing import Process, Queue, Pool
 
+tf.enable_eager_execution()
 
 parser = argparse.ArgumentParser("train speaker extractor")
 parser.add_argument("-tflite_file", type=str, required=True)
+parser.add_argument("-batch_size", type=int, required=True)
+parser.add_argument("-n_workers", type=int, default=4)
 args = parser.parse_args()
 
+
+#####################################################
+# parameters
+#####################################################
 n_labels = 1211
 tflite_file = args.tflite_file
-batch_size = int(os.path.basename(tflite_file).split('_')[-1].rstrip('.h5'))
+batch_size = args.batch_size
 ckpt_dir = '/'.join(tflite_file.split('/')[:-2])
 embed_dir = os.path.join(ckpt_dir, 'embeds', 'tflite')
 
 
+#####################################################
 # datasets
+#####################################################
 
-# train_x = np.expand_dims(np.load("train_500_1.npy"), 2)
-# train_y = np.load("train_500_1_label.npy")
-# val_x = np.expand_dims(np.load("val_500.npy"), 2)
-# val_y = np.load("val_500_label.npy")
-# dev_x = np.random.random((1000, 500, 1, 65))
-# dev_y = np.random.randint(0, 1211, (1000,))
-test_x = np.random.random((1000, 500, 1, 65)).astype(np.float32)
-test_y = np.random.randint(0, 1211, (1000,))
-
-# dev_ds = tf.data.Dataset.from_tensor_slices((dev_x, dev_x))
-# dev_ds = dev_ds.batch(batch_size)
+test_x = np.expand_dims(np.load("sv_set/voxc1/fbank64/npy/test_500.npy"), 2)
+test_y = np.expand_dims(np.load("sv_set/voxc1/fbank64/npy/test_500_label.npy"), 2)
 test_ds = tf.data.Dataset.from_tensor_slices((test_x, test_y))
 test_ds = test_ds.batch(batch_size)
 
+#####################################################
+# interpreters
+#####################################################
 
-interpreter = tf.lite.Interpreter(model_path=tflite_file)
-interpreter.allocate_tensors()
+def f_interpreter(data):
+    interpreter = tf.lite.Interpreter(model_path=tflite_file)
+    interpreter.allocate_tensors()
+    input_index = interpreter.get_input_details()[0]["index"]
+    output_index = interpreter.get_output_details()[0]["index"]
 
-input_index = interpreter.get_input_details()[0]["index"]
-output_index = interpreter.get_output_details()[0]["index"]
-
-
-embed_list = []
-for i, (feat, label) in enumerate(tqdm(test_ds)):
-    # handling last batch
-    if feat.shape[0] != batch_size:
-        batch_residual = batch_size - feat.shape[0].value
-        paddings = tf.constant([[0, batch_residual], [0, 0], [0, 0], [0, 0]])
-        feat = tf.pad(feat, paddings, 'CONSTANT')
-    interpreter.set_tensor(input_index, feat)
+    data = tf.convert_to_tensor(np.expand_dims(data, 0))
+    interpreter.set_tensor(input_index, data)
     interpreter.invoke()
     embed = interpreter.get_tensor(output_index)
-    embed_list.append(embed)
 
+    return embed
+
+num_workers = args.n_workers
+with Pool(processes=num_workers) as pool:
+    embed_list = pool.map(f_interpreter, test_x, len(test_x)//num_workers+1)
+    print(len(embed_list))
+
+
+# batch_residual = batch_size - feat.shape[0].value
+# paddings = tf.constant([[0, batch_residual], [0, 0], [0, 0], [0, 0]])
+# feat = tf.pad(feat, paddings, 'CONSTANT')
+
+#####################################################
+# save outputs
+#####################################################
 if not os.path.isfile(embed_dir):
     os.makedirs(embed_dir, exist_ok=True)
 

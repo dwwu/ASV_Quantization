@@ -3,7 +3,6 @@ import numpy as np
 import argparse
 
 import tensorflow as tf
-
 from tdnn_model import make_tdnn_model, tdnn_config
 
 parser = argparse.ArgumentParser("train speaker extractor")
@@ -26,16 +25,14 @@ model.compile(optimizer='sgd', loss='sparse_categorical_crossentropy',
 latest = tf.train.latest_checkpoint(ckpt_dir)
 model.load_weights(latest)
 
+#####################################################
 # datasets
+#####################################################
 
-# train_x = np.expand_dims(np.load("train_500_1.npy"), 2)
-# train_y = np.load("train_500_1_label.npy")
-# val_x = np.expand_dims(np.load("val_500.npy"), 2)
-# val_y = np.load("val_500_label.npy")
-dev_x = np.random.random((1000, 500, 1, 65))
-dev_y = np.random.randint(0, 1211, (1000,))
-test_x = np.random.random((1000, 500, 1, 65))
-test_y = np.random.randint(0, 1211, (1000,))
+train_x = np.expand_dims(np.load("train_500_1.npy"), 2)
+train_y = np.load("train_500_1_label.npy")
+val_x = np.expand_dims(np.load("val_500.npy"), 2)
+val_y = np.load("val_500_label.npy")
 
 dev_ds = tf.data.Dataset.from_tensor_slices((dev_x, dev_x))
 dev_ds = dev_ds.batch(batch_size)
@@ -59,7 +56,3 @@ np.save(os.path.join(embed_dir, "sv_embeds.npy"), test_embeds)
 np.save(os.path.join(embed_dir, "sv_labels.npy"), test_y)
 
 print("embeds are saved to {}".format(embed_dir))
-
-
-
-

@@ -23,6 +23,7 @@ def load_numpy_arrays(array_path, label, frame_range):
 
     return container, label
 
+
 def generate_voxc1_ds(voxc1_dir, frame_range=(200, 400), is_train=False, return_labels=False):
     """
 
@@ -84,6 +85,7 @@ def voxc1_to_ds(voxc1_dir, batch_size, frame_range):
 
     return train_ds, val_ds, test_ds
 
+
 def voxc1_to_gends(train_x, train_y, val_x, val_y, batch_size):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -109,7 +111,6 @@ def voxc1_to_gends(train_x, train_y, val_x, val_y, batch_size):
     val_ds = val_ds.batch(batch_size)
 
     return train_ds, val_ds
-
 
 
 def measure_ds_speed(ds, n_samples, batch_size):
