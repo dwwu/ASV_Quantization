@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_curve
+import argparse
 
 def cosine_similarity(a, b):
     """
@@ -13,9 +14,12 @@ def cosine_similarity(a, b):
 
     return dot_product
 
+parser = argparse.ArgumentParser("sv test")
+parser.add_argument("-embed_file", type=str, required=True)
+args = parser.parse_args()
+
 trial = pd.read_csv("voxc1_sv_trial.csv")
-embeddings = np.load("xvector_embeds/voxc1_sv_embeds.npy")
-# embeddings = np.load("xvector_embeds/voxc1_xvector_embeds_quant.npy")
+embeddings = np.load(args.embed_file).squeeze()
 
 score_vector = cosine_similarity(embeddings[trial.enroll_idx],
         embeddings[trial.test_idx])
