@@ -4,6 +4,7 @@ import argparse
 import tensorflow as tf
 
 from tdnn_model import make_tdnn_model, tdnn_config
+from data_loader import generate_voxc1_ds
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -31,34 +32,15 @@ ckpt_dir =  args.ckpt_dir
 #####################################################
 
 steps_per_epoch = n_train_samples // batch_size
-train_x = np.expand_dims(np.load("sv_set/voxc1/fbank64/dev/merged/train_500_1.npy"), 2)
-train_y = np.load("sv_set/voxc1/fbank64/merged/train_500_1_label.npy")
-val_x = np.expand_dims(np.load("sv_set/voxc1/fbank64/dev/merged/val_500.npy"), 2)
-val_y = np.load("sv_set/voxc1/fbank64/dev/merged/val_500_label.npy")
-# train_x = np.random.random((1000, 500, 1, 65))
-# train_y = np.random.randint(0, 1211, (1000,))
-# val_x = np.random.random((1000, 500, 1, 65))
-# val_y = np.random.randint(0, 1211, (1000,))
 
-def train_generator():
-    for x, y in zip(train_x, train_y):
-        yield x, y
 
-def val_generator():
-    for x, y in zip(val_x, val_y):
-        yield x, y
+train_ds = generate_voxc1_ds("sv_set/voxc1/fbank64/dev/train/",
+        frame_range=(200, 400), is_train=True)
+train_ds = train_ds.padded_batch(batch_size, padded_shapes=([None, 1, 65], []),
+        drop_remainder=False)
 
-train_ds = tf.data.Dataset.from_generator(train_generator,
-                                          output_types=(tf.float32, tf.int32),
-                                          output_shapes=((500, 1, 65), ()))
-train_ds = train_ds.shuffle(buffer_size=n_train_samples)
-train_ds = train_ds.repeat()
-train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
-train_ds = train_ds.batch(batch_size)
-
-val_ds = tf.data.Dataset.from_generator(val_generator,
-                                        output_types=(tf.float32, tf.int32),
-                                        output_shapes=((500, 1, 65), ()))
+val_ds = generate_voxc1_ds("sv_set/voxc1/fbank64/dev/val/",
+        frame_range=(300, 300), is_train=False)
 val_ds = val_ds.batch(batch_size)
 
 #####################################################

@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 
-from tdnn_model import make_quant_tdnn_model, tdnn_config
+from tdnn_model import make_quant_tdnn_model_mnist, tdnn_config
 
 tf.enable_eager_execution()
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -29,19 +29,11 @@ n_frames = None
 # datasets
 ####################################################
 
-# train_x = np.load("sv_set/voxc1/fbank64/dev/merged/train_500_1.npy")
-# train_y = np.load("sv_set/voxc1/fbank64/dev/merged/train_500_1_label.npy")
-# val_x = np.load("sv_set/voxc1/fbank64/dev/merged/val_500.npy")
-# val_y = np.load("sv_set/voxc1/fbank64/dev/merged/val_500_label.npy")
-# train_x = np.expand_dims(train_x, 2)
-# val_x = np.expand_dims(val_x, 2)
+fashion_mnist = tf.keras.datasets.fashion_mnist
+(train_x, train_y), (val_x, val_y) = fashion_mnist.load_data()
+train_x = np.expand_dims(train_x / 255.0, -1)
+val_x = np.expand_dims(val_x / 255.0, -1)
 
-train_x = np.load("sv_set/voxc1/fbank64/dev/merged/train_500_1_quant.npy")
-train_y = np.load("sv_set/voxc1/fbank64/dev/merged/train_500_1_label.npy")
-val_x = np.load("sv_set/voxc1/fbank64/dev/merged/val_500_quant.npy")
-val_y = np.load("sv_set/voxc1/fbank64/dev/merged/val_500_label.npy")
-train_x = np.expand_dims(train_x, 2)
-val_x = np.expand_dims(val_x, 2)
 
 def train_generator():
     for x, y in zip(train_x, train_y):
@@ -79,11 +71,11 @@ train_sess = tf.Session(graph=train_graph)
 tf.keras.backend.set_session(train_sess)
 with train_graph.as_default():
     config = tdnn_config(model_size)
-    train_model = make_quant_tdnn_model(config, n_labels=1211, n_frames=n_frames)
+    train_model = make_quant_tdnn_model_mnist(config, n_labels=1211, n_frames=n_frames)
 
     train_ds = tf.data.Dataset.from_generator(train_generator,
             output_types=(tf.float32, tf.int32),
-            output_shapes=((n_frames, 1, 65), ()))
+            output_shapes=((28, 28, 1), ()))
     train_ds = train_ds.shuffle(buffer_size=len(train_x))
     train_ds = train_ds.repeat()
     train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
@@ -91,20 +83,19 @@ with train_graph.as_default():
     train_iterator = train_ds.make_one_shot_iterator()
     train_feat, train_label = train_iterator.get_next()
     train_feat = tf.quantization.fake_quant_with_min_max_args(train_feat,
-            min=0, max=1)
+            min=-24, max=16)
 
     val_ds = tf.data.Dataset.from_generator(val_generator,
             output_types=(tf.float32, tf.int32),
-            output_shapes=((n_frames, 1, 65), ()))
-    val_ds = val_ds.repeat()
+            output_shapes=((28, 28, 1), ()))
     val_ds = val_ds.batch(batch_size)
     val_iterator = val_ds.make_one_shot_iterator()
     val_feat, val_label = val_iterator.get_next()
     val_feat = tf.quantization.fake_quant_with_min_max_args(val_feat,
-            min=0, max=1)
+            min=-24, max=16)
 
     tf.contrib.quantize.create_training_graph(input_graph=train_graph,
-            quant_delay=100)
+            quant_delay=1000)
     train_sess.run(tf.global_variables_initializer())
 
     train_model.compile(optimizer=tf.keras.optimizers.Adam(0.001),
@@ -134,7 +125,7 @@ eval_sess = tf.Session(graph=eval_graph)
 tf.keras.backend.set_session(eval_sess)
 with eval_graph.as_default():
     tf.keras.backend.set_learning_phase(0)
-    eval_model = make_quant_tdnn_model(config, n_labels=1211, n_frames=n_frames)
+    eval_model = make_quant_tdnn_model_mnist(config, n_labels=1211, n_frames=n_frames)
     tf.contrib.quantize.create_eval_graph(input_graph=eval_graph)
     eval_graph_def = eval_graph.as_graph_def()
     saver = tf.train.Saver()
@@ -156,7 +147,7 @@ with eval_graph.as_default():
 
 converter = tf.lite.TFLiteConverter.from_frozen_graph(
     os.path.join(ckpt_dir, 'frozen_model.pb'), [eval_model.input.op.name],
-    [eval_model.output.op.name], {eval_model.input.op.name: (None, 500, 1, 65)})
+    [eval_model.output.op.name], {eval_model.input.op.name: (None, 28, 28, 1)})
 
 # conversion quant_aware model to fully quantized model
 converter.inference_type = tf.uint8

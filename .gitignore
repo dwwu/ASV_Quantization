@@ -3,6 +3,11 @@
 *.pkl
 *.h5
 *.ckpt.*
+*.tflite
+*.pb
+
+# checkpoints
+checkpoint*
 
 # ignored directories
 benchmark
@@ -11,6 +16,7 @@ tflite_models
 
 # temporary files
 *.pyc
+*.ipynb_checkpoints
 
 # database
 *.csv
