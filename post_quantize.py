@@ -1,10 +1,11 @@
 import os
-import numpy as np
 import tensorflow as tf
 import argparse
 
-from tdnn_model import make_tdnn_model, tdnn_config, StatPooling
+from tdnn_model import make_quant_tdnn_model, tdnn_config, StatPooling
+from data.dataset import Voxceleb1
 
+tf.enable_eager_execution()
 
 def append_suffix_path(path, suffix):
     file_name = path.rstrip(".tflite")
@@ -75,17 +76,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ckpt_dir = args.ckpt_dir
-    tflite_dir = os.path.join(args.ckpt_dir, 'tflite_model')
+    # tflite_dir = args.tflite_dir
     model_size = args.model_size
 
     config = tdnn_config(model_size)
-    model = make_tdnn_model(config, 1211)
+    input_shape = (500, 1, 65)
+    model = make_quant_tdnn_model(config, 1211, input_shape)
 
     latest = tf.train.latest_checkpoint(ckpt_dir)
     model.load_weights(latest)
-
-    for _ in range(6):
-        model.pop()
     model.summary()
 
     tf_file = os.path.join(ckpt_dir, "tflite", "tf_model.h5")
@@ -95,15 +94,14 @@ if __name__ == "__main__":
 
     if args.post_quant:
         if args.act_quant:
-            val_x = np.random.random((1000, 500, 1, 65))
-            val_y = np.random.randint(0, 1211, (1000,))
+            dataset = Voxceleb1("/tmp/sv_set/voxc1/fbank64")
+            val_x, val_y = dataset.get_norm("dev/val", scale=24)
             val_ds = tf.data.Dataset.from_tensor_slices((val_x, val_y))
 
             # batch_size = 1
             batch_size = 1
-            val_ds_ = val_ds.batch(batch_size)
             def representative_data_gen():
-                for input_value, _ in val_ds_.take(200//batch_size):
+                for input_value, _ in val_ds.batch(batch_size).take(200//batch_size):
                     yield [tf.cast(input_value, tf.float32)]
 
             output_file = os.path.join(ckpt_dir, 'tflite', 'tflite_quant_act_{}.h5'.format(batch_size))
@@ -113,13 +111,7 @@ if __name__ == "__main__":
                              act_quant=True, repr_data_gen=representative_data_gen
                              )
 
-            # batch_size = 32
             batch_size = 32
-            val_ds_ = val_ds.batch(batch_size)
-            def representative_data_gen1():
-                for input_value, _ in val_ds_.take(200//batch_size):
-                    yield [tf.cast(input_value, tf.float32)]
-
             output_file = os.path.join(ckpt_dir, 'tflite', 'tflite_quant_act_{}.h5'.format(batch_size))
             convert_to_quant(tf_file, output_file,
                              custom_objects={'StatPooling':StatPooling},
@@ -161,4 +153,4 @@ if __name__ == "__main__":
                           custom_objects={'StatPooling':StatPooling}
                           )
 
-    print("{} transformed to {}".format(latest, output_file))
+    # print("{} transformed to {}".format(latest, output_file))

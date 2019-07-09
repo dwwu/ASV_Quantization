@@ -14,5 +14,5 @@ tflite_convert \
     --graph_def_file=$graph_file \
     --inference_type=FLOAT \
     --input_arrays=conv2d_input \
-    --input_shape=1,500,1,65 \
+    --input_shape=1,500,1,64 \
     --output_arrays=dense_1/Softmax

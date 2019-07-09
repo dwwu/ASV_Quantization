@@ -2,8 +2,6 @@ import numpy as np
 import argparse
 import tensorflow as tf
 
-from dataset import Voxceleb1
-
 
 parser = argparse.ArgumentParser("evaluate tflite model")
 parser.add_argument("-tflite_file", type=str, required=True)
@@ -14,9 +12,9 @@ args = parser.parse_args()
 tflite_file = args.tflite_file
 n_test = args.n_test
 
-dataset = Voxceleb1("/tmp/sv_set/voxc1/fbank64")
-test_x, test_y = dataset.get_norm("dev/test", scale=24)
-test_x = test_x[:n_test]
+test_x = np.load("sv_set/voxc1/fbank64/dev/merged/test_500.npy")
+test_y = np.load("sv_set/voxc1/fbank64/dev/merged/test_500_label.npy")
+test_x = np.expand_dim(test_x[:n_test], 2) / 24
 test_y = test_y[:n_test]
 
 def quantize(detail, data):
@@ -51,7 +49,6 @@ n_corrects = 0
 if args.quantize:
     # print('quant_stat', input_details[0]['quantization'])
     for x, y in zip(test_x, test_y):
-        x = np.expand_dims(x, 0)
         x = quantize(input_details[0], x)
         interpreter.set_tensor(input_details[0]['index'], x)
         interpreter.invoke()
@@ -60,19 +57,16 @@ if args.quantize:
         output_ = interpreter.get_tensor(output_details[0]['index'])
         output_ = dequantize(output_details[0], output_)
         pred = output_.argmax()
-        print(pred, y)
         if pred == y:
             n_corrects += 1
 else:
     for x, y in zip(test_x, test_y):
-        x = np.expand_dims(x, 0)
         interpreter.set_tensor(input_details[0]['index'], x)
         interpreter.invoke()
 
         # The results are stored on 'index' of output_details
         output_ = interpreter.get_tensor(output_details[0]['index'])
         pred = output_.argmax()
-        print(pred, y)
         if pred == y:
             n_corrects += 1
 
