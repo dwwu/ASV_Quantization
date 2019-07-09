@@ -119,4 +119,3 @@ if __name__ == "__main__":
     thres = thres[np.nanargmin(np.abs(fpr - (1 - tpr)))]
 
     print("[PLDA] EER: {:.4f}".format(eer))
-

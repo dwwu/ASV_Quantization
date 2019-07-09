@@ -3,6 +3,8 @@ import glob
 import numpy as np
 import tensorflow as tf
 
+AUTOTUNE = tf.data.experimental.AUTOTUNE
+
 # https://www.tensorflow.org/guide/datasets#applying_arbitrary_python_logic_with_tfpy_func
 def load_numpy_arrays(array_path, label, frame_range):
     try:
@@ -13,7 +15,7 @@ def load_numpy_arrays(array_path, label, frame_range):
     n_frames = np.random.randint(frame_range[0], frame_range[1]+1)
 
     if len(array) < n_frames:
-        container = np.zeros((n_frames , 65), dtype=np.float32)
+        container = np.zeros((n_frames , array.shape[-1]), dtype=np.float32)
         container[0:len(array)] = array
     else:
         start_idx = np.random.randint(0, len(array)-n_frames+1)
@@ -32,7 +34,6 @@ def generate_voxc1_ds(voxc1_dir, frame_range=(200, 400), is_train=False, return_
     :return: tf.data.Dataset of voxceleb1
     """
 
-    AUTOTUNE = tf.data.experimental.AUTOTUNE
     # voxc1_dir should be feature's root
     feat_files = sorted(glob.glob(voxc1_dir + '/**/*.npy', recursive=True))
     all_labels = sorted(os.listdir(voxc1_dir))
@@ -50,11 +51,10 @@ def generate_voxc1_ds(voxc1_dir, frame_range=(200, 400), is_train=False, return_
     path_ds = tf.data.Dataset.from_tensor_slices((feat_files, label_list))
 
     voxc1_ds = path_ds.map(
-        lambda array_path, label: tuple(tf.numpy_function(load_numpy_arrays,
-                                                   [array_path, label, frame_range],
-                                                   [tf.float32, tf.int32])),
-        num_parallel_calls=AUTOTUNE
-    )
+            lambda array_path, label: tuple(tf.numpy_function(load_numpy_arrays,
+                [array_path, label, frame_range],
+                [tf.float32, tf.int32])),
+            num_parallel_calls=AUTOTUNE)
 
     if is_train:
         voxc1_ds = voxc1_ds.shuffle(buffer_size=len(feat_files))
@@ -87,7 +87,6 @@ def voxc1_to_ds(voxc1_dir, batch_size, frame_range):
 
 
 def voxc1_to_gends(train_x, train_y, val_x, val_y, batch_size):
-    AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     def train_generator():
         for x, y in zip(train_x, train_y):
@@ -137,4 +136,3 @@ def measure_ds_speed(ds, n_samples, batch_size):
       print("Total time: {}s".format(end-overall_start))
 
     timeit(ds)
-

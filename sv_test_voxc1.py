@@ -20,6 +20,7 @@ args = parser.parse_args()
 
 trial = pd.read_csv("voxc1_sv_trial.csv")
 embeddings = np.load(args.embed_file).squeeze()
+print("embedding shape: {}".format(embeddings.shape))
 
 score_vector = cosine_similarity(embeddings[trial.enroll_idx],
         embeddings[trial.test_idx])
