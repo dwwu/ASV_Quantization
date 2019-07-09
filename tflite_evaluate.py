@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from data.dataset import Voxceleb1
 
+
 parser = argparse.ArgumentParser("evaluate tflite model")
 parser.add_argument("-tflite_file", type=str, required=True)
 parser.add_argument("-quantize", action='store_true')
