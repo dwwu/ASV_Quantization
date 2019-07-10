@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 
-from dataset import Voxceleb1
+from data.dataset import Voxceleb1
 
 
 parser = argparse.ArgumentParser("evaluate tflite model")

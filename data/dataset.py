@@ -30,10 +30,10 @@ class Voxceleb1():
         elif set_n == 'test/test':
             x = np.load(
                     os.path.join(self.root,
-                        "test/sv_test/test_500.npy"))
+                        "test/sv_test/sv_test_500.npy"))
             y = np.load(
                     os.path.join(self.root,
-                        "test/sv_test/test_500_label.npy"))
+                        "test/sv_test/sv_test_500_label.npy"))
         else:
             raise NotImplementedError
 

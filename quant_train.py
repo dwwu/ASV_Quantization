@@ -10,6 +10,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 parser = argparse.ArgumentParser("train speaker extractor in quantized model")
 parser.add_argument("-n_epochs", type=int, default=40)
 parser.add_argument("-batch_size", type=int, default=64)
+parser.add_argument("-root_dir", type=str, default='/tmp/sv_set/voxc1/fbank64')
 parser.add_argument("-ckpt_dir", type=str, required=True)
 parser.add_argument("-model_size", type=str, choices=['S', 'M', 'L'], default='M', required=True)
 parser.add_argument("-model_file", type=str, default=None)
@@ -29,7 +30,7 @@ model_file = args.model_file
 # datasets
 ####################################################
 
-dataset = Voxceleb1("/tmp/sv_set/voxc1/fbank64")
+dataset = Voxceleb1(args.root_dir)
 train_x, train_y = dataset.get_norm("dev/train", scale=24)
 val_x, val_y = dataset.get_norm("dev/val", scale=24)
 input_shape = (train_x.shape[1], train_x.shape[2], train_x.shape[3])
@@ -134,9 +135,6 @@ with eval_graph.as_default():
     eval_graph_def = eval_graph.as_graph_def()
     saver = tf.train.Saver()
     saver.restore(eval_sess, save_file)
-    for _ in range(6):
-        eval_model.pop()
-    print(eval_model.output.op.name)
     frozen_graph_def = tf.graph_util.convert_variables_to_constants(
         eval_sess,
         eval_graph_def,

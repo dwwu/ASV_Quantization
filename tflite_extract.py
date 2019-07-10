@@ -62,7 +62,10 @@ def get_output_tensor(interpreter, name):
     tensor_info = interpreter.get_tensor_details()
     tensor_info = sorted(tensor_info, key=lambda x: x["index"])
     tensor_name_index = {info['name']:info['index'] for info in tensor_info}
-    tensor_index = tensor_name_index[name]
+    try:
+        tensor_index = tensor_name_index[name]
+    except KeyError as e:
+        print(tensor_info)
     tensor_detail = tensor_info[tensor_index]
 
     return tensor_index, tensor_detail
@@ -81,7 +84,7 @@ def interpreter_fn(data):
     interpreter.invoke()
     embed = interpreter.get_tensor(output_index)
     if args.quantize:
-        embed = dequantize(output_details[0], embed)
+        embed = dequantize(output_details, embed)
 
     return embed
 
