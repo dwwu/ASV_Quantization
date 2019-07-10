@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser("sv test")
 parser.add_argument("-embed_file", type=str, required=True)
 args = parser.parse_args()
 
-trial = pd.read_csv("voxc1_sv_trial.csv")
+trial = pd.read_csv("sv_set/voxc1/voxc1_sv_trial.csv")
 embeddings = np.load(args.embed_file).squeeze()
 print("embedding shape: {}".format(embeddings.shape))
 

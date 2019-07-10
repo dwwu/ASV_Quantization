@@ -84,7 +84,7 @@ def interpreter_fn(data):
     interpreter.invoke()
     embed = interpreter.get_tensor(output_index)
     if args.quantize:
-        embed = dequantize(output_details[0], embed)
+        embed = dequantize(output_details, embed)
 
     return embed
 
